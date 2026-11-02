@@ -1,0 +1,28 @@
+# myter configuration.
+# Lookup order: first CLI argument, ./keymap.toml, ~/.config/myter/keymap.toml
+#
+# Key syntax: [ctrl-][alt-][shift-]<key>
+#   <key> = single char | enter esc tab space backspace delete insert
+#           home end pageup pagedown up down left right f1..f12
+#   e.g. "alt-p", "ctrl-alt-x", "f2", "alt--" (alt + minus)
+#
+# Actions: toggle_popup, toggle_split, quit, scroll_up, scroll_down,
+#          { send = "text" }   (types text into R; only while R is visible)
+#
+# Only the keys listed here are intercepted. Everything else goes to R.
+
+[keys]
+"alt-p" = "toggle_popup"
+"alt-v" = "toggle_split"
+"alt-q" = "quit"
+"alt-u" = "scroll_up"
+"alt-d" = "scroll_down"
+"alt-s" = { send = "summary(cars)\r" }
+
+[popup]
+width = 80
+height = 70
+
+[r]
+command = "R"
+args = ["--no-save", "--quiet"]
