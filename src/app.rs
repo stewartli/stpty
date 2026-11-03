@@ -53,6 +53,7 @@ impl App {
         } else {
             target
         };
+        // manually record status and error
         if self.view != View::Main && self.pane.is_none() {
             self.error = None;
         }

@@ -39,8 +39,8 @@ impl Pane {
         if let Ok(cwd) = std::env::current_dir() {
             cmd.cwd(cwd);
         }
-        // so the reader sees EOF when the child exits
         let child = pair.slave.spawn_command(cmd)?;
+        // so the reader sees EOF when the child exits
         drop(pair.slave);
 
         let mut reader = pair.master.try_clone_reader()?;
@@ -94,6 +94,7 @@ impl Pane {
         if bytes.is_empty() {
             return;
         }
+        // terminal state
         self.parser.lock().unwrap().screen_mut().set_scrollback(0);
         let _ = self.writer.write_all(bytes);
         let _ = self.writer.flush();

@@ -79,7 +79,7 @@ impl Config {
     }
     pub fn load(x: Option<PathBuf>) -> crate::Res<Self> {
         let mut cfg = Self::new("r")?;
-        // 1> user provide, 2> xdg path, 3> home dir,
+        // 1> default keymaps, 2> args file, 3> xdg path, 4> home dir,
         let text = match x {
             Some(p) => {
                 Some(std::fs::read_to_string(&p).map_err(|e| format!("{}: {e}", p.display()))?)
@@ -100,35 +100,7 @@ impl Config {
         // set keymap.toml
         let Some(text) = text else { return Ok(cfg) };
         let table: toml::Table = text.parse()?;
-
-        if let Some(keys) = table.get("keys").and_then(|v| v.as_table()) {
-            for (label, v) in keys {
-                let action = parse_action(v).map_err(|e| format!("[keys] {label:?}: {e}"))?;
-                let key = parse_key(label).map_err(|e| format!("[keys] {label:?}: {e}"))?;
-                cfg.keys.insert(key, (label.clone(), action));
-            }
-        }
-        if let Some(p) = table.get("popup").and_then(|v| v.as_table()) {
-            let pct = |name: &str, dflt: u16| {
-                p.get(name)
-                    .and_then(|v| v.as_integer())
-                    .map(|n| n.clamp(10, 100) as u16)
-                    .unwrap_or(dflt)
-            };
-            cfg.popup_w = pct("width", cfg.popup_w);
-            cfg.popup_h = pct("height", cfg.popup_h);
-        }
-        if let Some(r) = table.get("r").and_then(|v| v.as_table()) {
-            if let Some(c) = r.get("command").and_then(|v| v.as_str()) {
-                cfg.cmd = c.to_string();
-            }
-            if let Some(a) = r.get("args").and_then(|v| v.as_array()) {
-                cfg.args = a
-                    .iter()
-                    .filter_map(|x| x.as_str().map(String::from))
-                    .collect();
-            }
-        }
+        parse_toml(table, &mut cfg)?;
         Ok(cfg)
     }
     pub fn lookup(&self, k: &KeyEvent) -> Option<&Action> {
@@ -204,6 +176,38 @@ fn parse_key(s: &str) -> crate::Res<(KeyCode, KeyModifiers)> {
         _ => return Err(format!("unknown key {key:?}").into()),
     };
     Ok((code, mods))
+}
+
+fn parse_toml(table: toml::Table, cfg: &mut Config) -> crate::Res<()> {
+    if let Some(keys) = table.get("keys").and_then(|v| v.as_table()) {
+        for (label, v) in keys {
+            let action = parse_action(v).map_err(|e| format!("[keys] {label:?}: {e}"))?;
+            let key = parse_key(label).map_err(|e| format!("[keys] {label:?}: {e}"))?;
+            cfg.keys.insert(key, (label.clone(), action));
+        }
+    }
+    if let Some(p) = table.get("popup").and_then(|v| v.as_table()) {
+        let pct = |name: &str, dflt: u16| {
+            p.get(name)
+                .and_then(|v| v.as_integer())
+                .map(|n| n.clamp(10, 100) as u16)
+                .unwrap_or(dflt)
+        };
+        cfg.popup_w = pct("width", cfg.popup_w);
+        cfg.popup_h = pct("height", cfg.popup_h);
+    }
+    if let Some(r) = table.get("r").and_then(|v| v.as_table()) {
+        if let Some(c) = r.get("command").and_then(|v| v.as_str()) {
+            cfg.cmd = c.to_string();
+        }
+        if let Some(a) = r.get("args").and_then(|v| v.as_array()) {
+            cfg.args = a
+                .iter()
+                .filter_map(|x| x.as_str().map(String::from))
+                .collect();
+        }
+    }
+    Ok(())
 }
 
 pub fn key_to_bytes(k: KeyEvent, app_cursor: bool) -> Vec<u8> {
